@@ -7,6 +7,16 @@ class FullyConnected:
         self.gradient = None                                         #gradient of weights and biases in one matrix
         self._optimizer = None
 
+    def initialize(self, weights_initializer, bias_initializer):
+        #the last column in weights is bias
+        shape = self.weights.shape
+        initial_weights= weights_initializer.initialize((shape[0],shape[1] - 1), shape[0], shape[1])
+        initial_bias = bias_initializer.initialize((shape[0], 1), shape[0], shape[1])
+        self.weights = np.concatenate((initial_weights, initial_bias), axis = 1)
+        #self.weights[: , :-1] = weights_initializer.initialize((shape[0],shape[1] - 1), shape[0], shape[1])
+        #self.bias[: , -1] = bias_initializer.initialize((shape[0], 1), shape[0], shape[1])
+        #前一句可行，后一句不可行，因为只用-1得到的是最后一列的向量，形状是（3，）
+
     def forward(self,input_tensor):
         batch_size = input_tensor.shape[0]                                                      #input tensor is a matrix with columns of input size and rows of batch size
         self.input_tensor = np.concatenate((input_tensor, np.ones((batch_size,1))),axis = 1)    #add 1-vector in the end of input_tensor
