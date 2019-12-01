@@ -1,13 +1,15 @@
 import copy
 
 class NeuralNetwork:
-    def __init__(self, optimizer):
+    def __init__(self, optimizer, weights_initializer, bias_initializer):
         self.optimizer = optimizer
         self.loss = []
         self.layers = []
         self.data_layer = None
         self.loss_layer = None
         self.label_tensor = None            #Data load function must be operated one time in one training iteration
+        self.weights_initializer = weights_initializer
+        self.bias_initializer = bias_initializer
 
     def forward(self):
         input_tensor, self.label_tensor = self.data_layer.forward()         # see IrisData class in Helpers.py
@@ -26,9 +28,11 @@ class NeuralNetwork:
             error_tensor = layer.backward(error_tensor)                     #update is in FullyConnected class
         pass
 
-    def append_trainable_layer(self,layer):               #in this case, the trainable layer is fullyconnected layer
+    def append_trainable_layer(self,layer):               #in this case, the trainable layer is fullyconnected layer or convolutional layer
+        # Because the optimizer will store temporal variable(such as momentum) for each layer, so you must make a copy
         optimizer = copy.deepcopy(self.optimizer)
         layer.optimizer = optimizer
+        layer.initialize(self.weights_initializer, self.bias_initializer)       #initialize weights and bias
         self.layers.append(layer)
 
     def train(self,iterations):
