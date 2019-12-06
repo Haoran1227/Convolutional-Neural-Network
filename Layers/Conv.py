@@ -58,50 +58,50 @@ class Conv:
         # input_tensor shape is (B,C,Y,X), weights shape is (H,C,M,N), stride is (Y_stride, X_stride)
 
 #########################################################################################################
-        # Forward propagation by subsampling after convolution
-
-        num_Y = math.ceil(self.Y / self.stride[0])  #number of convolution centers in Y axis
-        num_X = math.ceil(self.X / self.stride[1])  #number of convolution centers in X axis
-        output_tensor = np.zeros((self.B, self.H, num_Y, num_X))
-        for b in range(self.B):  # in each batch_element
-            for h in range(self.H):  # in each convolutional kernel
-                tmp = 0     # stores the result of convolution without subsampling
-                for c in range(self.C):  # in each channel
-                    tmp += sgl.correlate2d(self.input_tensor[b, c, :, :], self.weights[h, c, :, :], "same")
-                #subsampling, the positions which order can divide stride exactly(整除) should remain.
-                output_tensor[b, h, :, :] = tmp[0: self.Y: self.stride[0], 0: self.X: self.stride[1]]
-                #add bias
-                output_tensor[b, h, :, :] += self.bias[h]
-        #for now, output_tensor shape is (B, H, num_Y, num_X). reshape it for 1D case
-        output_tensor = output_tensor.reshape(output_shape)
-##########################################################################################################
-##########################################################################################################
-        # Forward propagation by im2col
+        # # Forward propagation by subsampling after convolution
         #
         # num_Y = math.ceil(self.Y / self.stride[0])  #number of convolution centers in Y axis
         # num_X = math.ceil(self.X / self.stride[1])  #number of convolution centers in X axis
-        # b_col = self.M // 2                         # before_pad_width in M orientation
-        # a_col = (self.M - 1) // 2                   # after_pad_width in M orientation
-        # b_row = self.N // 2                         # before_pad_width in N orientation
-        # a_row = (self.N - 1) // 2                   # after_pad_width in N orientation
         # output_tensor = np.zeros((self.B, self.H, num_Y, num_X))
         # for b in range(self.B):  # in each batch_element
         #     for h in range(self.H):  # in each convolutional kernel
+        #         tmp = 0     # stores the result of convolution without subsampling
         #         for c in range(self.C):  # in each channel
-        #             img = self.input_tensor[b, c, :, :]
-        #             img = np.pad(img, ((b_col, a_col), (b_row, a_row)), "constant", constant_values=0)  #padding
-        #             im2col = []
-        #             for i in range(num_Y):
-        #                 o_Y = i * self.stride[0]        # Y_coordinate of origin of convolutional region
-        #                 for j in range(num_X):
-        #                     o_X = j * self.stride[1]    # X_coordinate of origin of convolutional region
-        #                     im2col.append(img[o_Y: o_Y + self.M, o_X: o_X + self.N])
-        #             img = np.array(im2col).reshape(num_Y * num_X, self.M * self.N)      # img has been converted to convolution region columns
-        #             convolution = np.dot(img, self.weights[h, c, :, :].reshape(-1, 1))  # calculate convolution
-        #             output_tensor[b, h, :, :] += convolution.reshape(num_Y, num_X)      # superposition of different channels
-        #         # add bias
+        #             tmp += sgl.correlate2d(self.input_tensor[b, c, :, :], self.weights[h, c, :, :], "same")
+        #         #subsampling, the positions which order can divide stride exactly(整除) should remain.
+        #         output_tensor[b, h, :, :] = tmp[0: self.Y: self.stride[0], 0: self.X: self.stride[1]]
+        #         #add bias
         #         output_tensor[b, h, :, :] += self.bias[h]
+        # #for now, output_tensor shape is (B, H, num_Y, num_X). reshape it for 1D case
         # output_tensor = output_tensor.reshape(output_shape)
+##########################################################################################################
+##########################################################################################################
+        # Forward propagation by im2col
+
+        num_Y = math.ceil(self.Y / self.stride[0])  #number of convolution centers in Y axis
+        num_X = math.ceil(self.X / self.stride[1])  #number of convolution centers in X axis
+        b_col = self.M // 2                         # before_pad_width in M orientation
+        a_col = (self.M - 1) // 2                   # after_pad_width in M orientation
+        b_row = self.N // 2                         # before_pad_width in N orientation
+        a_row = (self.N - 1) // 2                   # after_pad_width in N orientation
+        output_tensor = np.zeros((self.B, self.H, num_Y, num_X))
+        for b in range(self.B):  # in each batch_element
+            for h in range(self.H):  # in each convolutional kernel
+                for c in range(self.C):  # in each channel
+                    img = self.input_tensor[b, c, :, :]
+                    img = np.pad(img, ((b_col, a_col), (b_row, a_row)), "constant", constant_values=0)  #padding
+                    im2col = []
+                    for i in range(num_Y):
+                        o_Y = i * self.stride[0]        # Y_coordinate of origin of convolutional region
+                        for j in range(num_X):
+                            o_X = j * self.stride[1]    # X_coordinate of origin of convolutional region
+                            im2col.append(img[o_Y: o_Y + self.M, o_X: o_X + self.N])
+                    img = np.array(im2col).reshape(num_Y * num_X, self.M * self.N)      # img has been converted to convolution region columns
+                    convolution = np.dot(img, self.weights[h, c, :, :].reshape(-1, 1))  # calculate convolution
+                    output_tensor[b, h, :, :] += convolution.reshape(num_Y, num_X)      # superposition of different channels
+                # add bias
+                output_tensor[b, h, :, :] += self.bias[h]
+        output_tensor = output_tensor.reshape(output_shape)
 ##########################################################################################################
         return output_tensor
 
